@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shutterstock Auto-Tagger</title>
+    <meta name="description" content="Local AI Shutterstock Automation Web Interface">
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header glass-panel">
+            <div class="logo">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#paint0_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="url(#paint1_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="url(#paint2_linear)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="2" y1="7" x2="22" y2="7" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5"/>
+                            <stop offset="1" stop-color="#EC4899"/>
+                        </linearGradient>
+                        <linearGradient id="paint1_linear" x1="2" y1="19.5" x2="22" y2="19.5" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5"/>
+                            <stop offset="1" stop-color="#EC4899"/>
+                        </linearGradient>
+                        <linearGradient id="paint2_linear" x1="2" y1="14.5" x2="22" y2="14.5" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#4F46E5"/>
+                            <stop offset="1" stop-color="#EC4899"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <h1>Shutterstock Auto-Tagger</h1>
+            </div>
+            <div class="status-indicator" id="header-status">
+                <span class="pulse-dot"></span>
+                <span id="status-text">Ready</span>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Launch View -->
+            <section id="launch-view" class="view-section active glass-panel">
+                <div class="hero-content">
+                    <h2>Ready to Process</h2>
+                    <p class="subtitle">AI-powered metadata generation using Qwen2.5-VL</p>
+                    
+                    <div class="stats-card">
+                        <div class="stat-number" id="file-count">0</div>
+                        <div class="stat-label">Images in Raw Directory</div>
+                    </div>
+
+                    <button id="start-btn" class="primary-btn" disabled>
+                        <span class="btn-text">Start Processing</span>
+                        <svg class="btn-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                    </button>
+                    <p id="start-error" class="error-msg"></p>
+                </div>
+            </section>
+
+            <!-- Table View -->
+            <section id="table-view" class="view-section glass-panel hidden">
+                <div class="table-header">
+                    <h2>Processing Results</h2>
+                    <div class="table-actions">
+                        <span id="progress-text" class="progress-text">0 / 0 Completed</span>
+                        <button id="clear-btn" class="secondary-btn hidden" style="margin-left: 1rem; color: var(--danger); border-color: var(--danger);">Clear Run</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%">Image</th>
+                                <th style="width: 10%">Status</th>
+                                <th style="width: 20%">Title</th>
+                                <th style="width: 25%">Description</th>
+                                <th style="width: 15%">Keywords</th>
+                                <th style="width: 15%">Categories</th>
+                                <th style="width: 80px">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination & Controls -->
+                <div class="table-footer">
+                    <div class="pagination">
+                        <button id="prev-page" class="icon-btn" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <span id="page-info">Page 1 of 1</span>
+                        <button id="next-page" class="icon-btn" disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content glass-panel">
+            <div class="modal-header">
+                <h3>Edit Metadata</h3>
+                <span id="edit-filename" class="subtitle"></span>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-image-container" style="margin-bottom: 1.25rem; width: 100%; border-radius: 6px; overflow: hidden; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.3);">
+                    <img id="edit-image-preview" src="" alt="Preview" style="width: 100%; height: auto; display: block; max-height: 250px; object-fit: contain;">
+                </div>
+                <form id="edit-form">
+                    <div class="form-group">
+                        <label for="edit-title">Title (For EXIF)</label>
+                        <input type="text" id="edit-title" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-description">Description</label>
+                        <textarea id="edit-description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-keywords">Keywords (comma separated)</label>
+                        <textarea id="edit-keywords" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group" style="display: flex; gap: 1rem;">
+                        <div style="flex: 1;">
+                            <label for="edit-category-1">Primary Category</label>
+                            <select id="edit-category-1" class="form-control"></select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="edit-category-2">Secondary Category (Optional)</label>
+                            <select id="edit-category-2" class="form-control">
+                                <option value="">-- None --</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+                <div id="save-error" class="error-msg"></div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-edit" class="secondary-btn">Cancel</button>
+                <button id="save-edit" class="primary-btn">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

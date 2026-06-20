@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+app/venv/
+
+# ExifTool binary — download separately, see docs/usage_guide.md
+app/exiftool/
+
+# Runtime / transient app files
+app/processing/*
+!app/processing/.gitkeep
+app/logs/*
+!app/logs/.gitkeep
+
+# User content — not tracked in repo
+content/raw/
+content/output/
+content/csv/
+
+# Keep content directory structure
+!content/.gitkeep
+!content/raw/.gitkeep
+!content/output/.gitkeep
+!content/csv/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
