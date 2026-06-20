@@ -70,10 +70,23 @@
             <!-- Table View -->
             <section id="table-view" class="view-section glass-panel hidden">
                 <div class="table-header">
-                    <h2>Processing Results</h2>
-                    <div class="table-actions">
-                        <span id="progress-text" class="progress-text">0 / 0 Completed</span>
-                        <button id="clear-btn" class="secondary-btn hidden" style="margin-left: 1rem; color: var(--danger); border-color: var(--danger);">Clear Run</button>
+                    <div class="table-header-top">
+                        <h2>Processing Results</h2>
+                        <div class="table-actions">
+                            <span id="progress-text" class="progress-text">0 / 0 Completed</span>
+                            <span id="error-count" class="error-chip hidden"></span>
+                            <button id="clear-btn" class="secondary-btn hidden" style="margin-left: 1rem; color: var(--danger); border-color: var(--danger);">Clear Run</button>
+                        </div>
+                    </div>
+                    <div class="table-search">
+                        <div class="search-input-wrapper">
+                            <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="search-input" class="search-input" placeholder="Search by file name… (min. 3 characters)" autocomplete="off" maxlength="100">
+                            <button id="search-clear" class="search-clear-btn hidden" title="Clear search">&times;</button>
+                        </div>
                     </div>
                 </div>
 
