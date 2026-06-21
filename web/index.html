@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shutterstock Auto-Tagger</title>
-    <meta name="description" content="Local AI Shutterstock Automation Web Interface">
+    <title>ShutterScribe</title>
+    <meta name="description" content="ShutterScribe – Local AI-powered image metadata generation">
     <!-- Google Fonts: Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +36,7 @@
                         </linearGradient>
                     </defs>
                 </svg>
-                <h1>Shutterstock Auto-Tagger</h1>
+                <h1>ShutterScribe</h1>
             </div>
             <div class="status-indicator" id="header-status">
                 <span class="pulse-dot"></span>
@@ -75,7 +75,15 @@
                         <div class="table-actions">
                             <span id="progress-text" class="progress-text">0 / 0 Completed</span>
                             <span id="error-count" class="error-chip hidden"></span>
-                            <button id="clear-btn" class="secondary-btn hidden" style="margin-left: 1rem; color: var(--danger); border-color: var(--danger);">Clear Run</button>
+                            <button id="upload-btn" class="upload-btn hidden">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="16 16 12 12 8 16"></polyline>
+                                    <line x1="12" y1="12" x2="12" y2="21"></line>
+                                    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                                </svg>
+                                Upload to Shutterstock
+                            </button>
+                            <button id="clear-btn" class="secondary-btn hidden" style="color: var(--danger); border-color: var(--danger);">Clear Run</button>
                         </div>
                     </div>
                     <div class="table-search">
@@ -87,6 +95,17 @@
                             <input type="text" id="search-input" class="search-input" placeholder="Search by file name… (min. 3 characters)" autocomplete="off" maxlength="100">
                             <button id="search-clear" class="search-clear-btn hidden" title="Clear search">&times;</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Upload Progress Bar -->
+                <div id="upload-progress-section" class="upload-progress-section hidden">
+                    <div class="upload-progress-header">
+                        <span id="upload-status-text" class="upload-status-text">Connecting to Shutterstock…</span>
+                        <span id="upload-error-count" class="error-chip hidden"></span>
+                    </div>
+                    <div class="upload-progress-track">
+                        <div id="upload-progress-fill" class="upload-progress-fill" style="width: 0%"></div>
                     </div>
                 </div>
 

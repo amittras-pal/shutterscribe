@@ -13,12 +13,19 @@ const elements = {
     progressText: document.getElementById('progress-text'),
     errorCount: document.getElementById('error-count'),
     clearBtn: document.getElementById('clear-btn'),
+    uploadBtn: document.getElementById('upload-btn'),
     searchInput: document.getElementById('search-input'),
     searchClear: document.getElementById('search-clear'),
 
     prevPage: document.getElementById('prev-page'),
     nextPage: document.getElementById('next-page'),
     pageInfo: document.getElementById('page-info'),
+
+    // Upload progress bar elements
+    uploadProgressSection: document.getElementById('upload-progress-section'),
+    uploadProgressFill: document.getElementById('upload-progress-fill'),
+    uploadStatusText: document.getElementById('upload-status-text'),
+    uploadErrorCount: document.getElementById('upload-error-count'),
 
     editModal: document.getElementById('edit-modal'),
     closeModal: document.getElementById('close-modal'),
@@ -36,7 +43,7 @@ const elements = {
     editImagePreview: document.getElementById('edit-image-preview')
 };
 
-const SHUTTERSTOCK_CATEGORIES = [
+const STOCK_CATEGORIES = [
     "Abstract", "Animals/Wildlife", "Arts", "Backgrounds/Textures",
     "Beauty/Fashion", "Buildings/Landmarks", "Business/Finance",
     "Celebrities", "Education", "Food and drink", "Healthcare/Medical",
@@ -46,7 +53,7 @@ const SHUTTERSTOCK_CATEGORIES = [
 ];
 
 // Initialize category options
-SHUTTERSTOCK_CATEGORIES.forEach(cat => {
+STOCK_CATEGORIES.forEach(cat => {
     elements.editCategory1.add(new Option(cat, cat));
     elements.editCategory2.add(new Option(cat, cat));
 });
@@ -58,7 +65,16 @@ let appState = {
     currentPage: 1,
     pageSize: 10,
     jobComplete: false,
-    searchQuery: ''
+    searchQuery: '',
+    upload: {
+        isUploading: false,
+        uploaded: 0,
+        failed: 0,
+        total: 0,
+        currentFile: '',
+        errors: [],
+        done: false,
+    }
 };
 
 let eventSource = null;
@@ -76,12 +92,12 @@ async function init() {
             // Restore state from backend
             appState.files = data.current_results;
             if (appState.isJobRunning) {
-                showTableView();
+                showTableView(true);
                 connectSSE();
             } else {
                 // Job already complete, restore to table view
                 appState.jobComplete = true;
-                showTableView();
+                showTableView(false);
             }
         } else {
             if (data.raw_count > 0 && !appState.isJobRunning) {
@@ -90,6 +106,39 @@ async function init() {
             // Initialize files array for pending state
             if (data.files && !appState.isJobRunning) {
                 appState.files = data.files.map(f => ({ filename: f, status: 'pending' }));
+            }
+        }
+
+        // ── Restore upload progress state ──────────────────────────────────
+        const up = data.upload_progress;
+        if (up && up.total > 0) {
+            appState.upload = {
+                isUploading: !!data.upload_running,
+                uploaded: up.uploaded || 0,
+                failed:   up.failed  || 0,
+                total:    up.total   || 0,
+                currentFile: up.current_file || '',
+                errors:   up.errors  || [],
+                done:     up.done    || false,
+            };
+
+            // Ensure the table view is visible (upload can only happen post-processing)
+            if (elements.tableView.classList.contains('hidden')) {
+                appState.jobComplete = true;
+                showTableView(false);
+            }
+
+            // Render the progress bar with the last known state
+            renderUploadProgress();
+
+            // If upload was still running when the page was refreshed, reconnect SSE
+            if (data.upload_running && (!eventSource || eventSource.readyState === EventSource.CLOSED)) {
+                connectSSE();
+            }
+
+            // If the upload completed fully, suppress the upload button — output/ is empty
+            if (up.done && up.failed === 0) {
+                elements.uploadBtn.classList.add('hidden');
             }
         }
 
@@ -111,15 +160,21 @@ function setHeaderStatus(running) {
 
     if (appState.jobComplete) {
         elements.clearBtn.classList.remove('hidden');
+        // Show upload button only if there are successfully processed files
+        const hasSuccessFiles = appState.files.some(f => f.status === 'success');
+        if (hasSuccessFiles) {
+            elements.uploadBtn.classList.remove('hidden');
+        }
     } else {
         elements.clearBtn.classList.add('hidden');
+        elements.uploadBtn.classList.add('hidden');
     }
 }
 
-function showTableView() {
+function showTableView(running = false) {
     elements.launchView.classList.add('hidden');
     elements.tableView.classList.remove('hidden');
-    setHeaderStatus(true);
+    setHeaderStatus(running);
     renderTable();
 }
 
@@ -197,6 +252,11 @@ function renderTable() {
     } else {
         elements.errorCount.classList.add('hidden');
     }
+
+    // Update document title with live progress
+    if (appState.isJobRunning) {
+        document.title = `ShutterScribe | Progress (${completed}/${appState.files.length})`;
+    }
 }
 
 // SSE Connection
@@ -230,6 +290,21 @@ function connectSSE() {
         handleSSEData('job_error', data);
     });
 
+    eventSource.addEventListener('upload_progress', (e) => {
+        const data = JSON.parse(e.data);
+        handleSSEData('upload_progress', data);
+    });
+
+    eventSource.addEventListener('upload_complete', (e) => {
+        const data = JSON.parse(e.data);
+        handleSSEData('upload_complete', data);
+    });
+
+    eventSource.addEventListener('upload_error', (e) => {
+        const data = JSON.parse(e.data);
+        handleSSEData('upload_error', data);
+    });
+
     eventSource.onerror = (err) => {
         console.error("SSE Error:", err);
     };
@@ -257,15 +332,111 @@ function handleSSEData(type, data) {
     } else if (type === 'job_complete') {
         appState.isJobRunning = false;
         appState.jobComplete = true;
+        document.title = 'ShutterScribe';
         setHeaderStatus(false);
         renderTable(); // Re-render to enable edit buttons
-        eventSource.close();
+        // Keep SSE connection alive — we need it for upload_progress events
         alert('Processing completed!');
     } else if (type === 'job_error') {
         appState.isJobRunning = false;
         setHeaderStatus(false);
         alert('Job failed: ' + data.error);
         eventSource.close();
+        eventSource = null;
+    } else if (type === 'upload_progress') {
+        appState.upload.isUploading = true;
+        appState.upload.total = data.total;
+        appState.upload.uploaded = data.uploaded;
+        appState.upload.failed = data.failed;
+        appState.upload.currentFile = data.filename;
+        if (data.status === 'failed' && data.error) {
+            appState.upload.errors.push({ filename: data.filename, error: data.error });
+        }
+        renderUploadProgress();
+    } else if (type === 'upload_complete') {
+        appState.upload.isUploading = false;
+        appState.upload.done = true;
+        appState.upload.total = data.total;
+        appState.upload.uploaded = data.uploaded;
+        appState.upload.failed = data.failed;
+        appState.upload.errors = data.errors || [];
+        appState.upload.currentFile = '';
+        renderUploadProgress();
+        elements.uploadBtn.disabled = false;
+        elements.uploadBtn.classList.remove('uploading');
+        // Hide upload button — output dir has been cleared
+        elements.uploadBtn.classList.add('hidden');
+        // Now we can safely close the SSE stream
+        if (eventSource) { eventSource.close(); eventSource = null; }
+    } else if (type === 'upload_error') {
+        appState.upload.isUploading = false;
+        appState.upload.done = true;
+        appState.upload.currentFile = '';
+        renderUploadProgress(true, data.error);
+        elements.uploadBtn.disabled = false;
+        elements.uploadBtn.classList.remove('uploading');
+        // Leave SSE open so the user can retry
+    }
+}
+
+// Upload Progress Rendering
+function renderUploadProgress(fatalError = false, fatalMessage = '') {
+    const { total, uploaded, failed, currentFile, done, errors } = appState.upload;
+
+    // Show the section
+    elements.uploadProgressSection.classList.remove('hidden');
+
+    const fill = elements.uploadProgressFill;
+    const statusText = elements.uploadStatusText;
+    const errorBadge = elements.uploadErrorCount;
+
+    // Determine fill width
+    const pct = total > 0 ? Math.round(((uploaded + failed) / total) * 100) : 0;
+    fill.style.width = `${pct}%`;
+
+    // Update fill appearance
+    fill.classList.remove('done', 'has-errors', 'all-failed');
+    if (done) {
+        if (fatalError) {
+            fill.classList.add('all-failed');
+        } else if (uploaded === 0 && failed > 0) {
+            fill.classList.add('all-failed');
+        } else if (failed > 0) {
+            fill.classList.add('has-errors');
+        } else {
+            fill.classList.add('done');
+        }
+    }
+
+    // Status text
+    if (fatalError) {
+        statusText.textContent = `Upload failed: ${fatalMessage}`;
+        statusText.style.color = 'var(--danger)';
+    } else if (done) {
+        if (uploaded === 0 && failed > 0) {
+            statusText.textContent = `Upload failed — all ${failed} file${failed !== 1 ? 's' : ''} could not be uploaded.`;
+            statusText.style.color = '#f87171';
+        } else if (failed > 0) {
+            statusText.textContent = `Upload complete — ${uploaded} uploaded, ${failed} failed.`;
+            statusText.style.color = '#fbbf24';
+        } else {
+            statusText.textContent = `✓ All ${uploaded} image${uploaded !== 1 ? 's' : ''} uploaded successfully.`;
+            statusText.style.color = '#34d399';
+        }
+    } else if (!currentFile) {
+        statusText.textContent = 'Connecting to Shutterstock…';
+        statusText.style.color = '';
+    } else {
+        statusText.textContent = `Uploading ${uploaded + failed} / ${total} — ${currentFile}`;
+        statusText.style.color = '';
+    }
+
+    // Error badge
+    if (failed > 0) {
+        errorBadge.textContent = `${failed} Error${failed !== 1 ? 's' : ''}`;
+        errorBadge.classList.remove('hidden');
+    } else {
+        errorBadge.classList.add('hidden');
     }
 }
 
@@ -292,6 +463,7 @@ elements.prevPage.addEventListener('click', () => {
     if (appState.currentPage > 1) {
         appState.currentPage--;
         renderTable();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 });
 
@@ -302,6 +474,7 @@ elements.nextPage.addEventListener('click', () => {
     if (appState.currentPage < totalPages) {
         appState.currentPage++;
         renderTable();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 });
 
@@ -344,14 +517,58 @@ elements.clearBtn.addEventListener('click', async () => {
         // Reset state and return to launch view
         appState.files = [];
         appState.jobComplete = false;
+        appState.upload = { isUploading: false, uploaded: 0, failed: 0, total: 0, currentFile: '', errors: [], done: false };
+        document.title = 'ShutterScribe';
         elements.tableView.classList.add('hidden');
         elements.launchView.classList.remove('hidden');
+        elements.uploadProgressSection.classList.add('hidden');
         setHeaderStatus(false);
+        // Close SSE on clear
+        if (eventSource) { eventSource.close(); eventSource = null; }
         init(); // Re-fetch initial status to update raw_count
     } catch (e) {
         alert(e.message);
     } finally {
         elements.clearBtn.disabled = false;
+    }
+});
+
+elements.uploadBtn.addEventListener('click', async () => {
+    if (appState.upload.isUploading) return;
+
+    // Reset upload state for a fresh run
+    appState.upload = { isUploading: true, uploaded: 0, failed: 0, total: 0, currentFile: '', errors: [], done: false };
+
+    // Show progress bar immediately in connecting state
+    elements.uploadProgressSection.classList.remove('hidden');
+    elements.uploadProgressFill.style.width = '0%';
+    elements.uploadProgressFill.classList.remove('done', 'has-errors', 'all-failed');
+    elements.uploadStatusText.textContent = 'Connecting to Shutterstock…';
+    elements.uploadStatusText.style.color = '';
+    elements.uploadErrorCount.classList.add('hidden');
+
+    elements.uploadBtn.disabled = true;
+    elements.uploadBtn.classList.add('uploading');
+
+    // Ensure SSE is connected before starting — it may have been closed after an error
+    if (!eventSource || eventSource.readyState === EventSource.CLOSED) {
+        connectSSE();
+    }
+
+    try {
+        const res = await fetch('/api/upload/start', { method: 'POST' });
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message);
+        }
+        // SSE events will drive the rest of the progress rendering
+    } catch (e) {
+        // Immediate failure (e.g. already uploading, or network error)
+        appState.upload.isUploading = false;
+        appState.upload.done = true;
+        renderUploadProgress(true, e.message);
+        elements.uploadBtn.disabled = false;
+        elements.uploadBtn.classList.remove('uploading');
     }
 });
 
@@ -367,15 +584,17 @@ window.openEditModal = function (filename) {
     elements.editKeywords.value = Array.isArray(fileObj.keywords) ? fileObj.keywords.join(', ') : fileObj.keywords;
 
     const cats = Array.isArray(fileObj.categories) ? fileObj.categories : (fileObj.categories || '').split(',').map(s => s.trim());
-    elements.editCategory1.value = cats[0] || SHUTTERSTOCK_CATEGORIES[0];
+    elements.editCategory1.value = cats[0] || STOCK_CATEGORIES[0];
     elements.editCategory2.value = cats[1] || "";
 
     elements.saveError.textContent = '';
     elements.editModal.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 };
 
 function closeEditModal() {
     elements.editModal.classList.add('hidden');
+    document.body.style.overflow = '';
 }
 
 elements.closeModal.addEventListener('click', closeEditModal);

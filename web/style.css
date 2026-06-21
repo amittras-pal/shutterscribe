@@ -609,3 +609,127 @@ textarea.form-control {
     object-fit: cover;
     margin-bottom: 4px;
 }
+
+/* ── Upload Button ────────────────────────────────────────────────────────── */
+
+.upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #059669, #10b981);
+    color: white;
+    border: none;
+    padding: 0.5rem 1.1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    font-family: var(--font-family);
+    box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.upload-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #047857, #059669);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.upload-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.upload-btn.uploading {
+    background: linear-gradient(135deg, #0e7490, #0891b2);
+    box-shadow: 0 2px 10px rgba(8, 145, 178, 0.3);
+    animation: upload-pulse 2s ease-in-out infinite;
+}
+
+@keyframes upload-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+}
+
+/* ── Upload Progress Bar ──────────────────────────────────────────────────── */
+
+.upload-progress-section {
+    margin-bottom: 1rem;
+    padding: 0.875rem 1rem;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.upload-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.625rem;
+}
+
+.upload-status-text {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.upload-progress-track {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.upload-progress-fill {
+    height: 100%;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, #10b981, #34d399, #6ee7b7);
+    background-size: 200% 100%;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    animation: shimmer 2s linear infinite;
+}
+
+.upload-progress-fill.done {
+    animation: none;
+    background: #10b981;
+}
+
+.upload-progress-fill.has-errors {
+    background: linear-gradient(90deg, #10b981, #f59e0b);
+    animation: none;
+}
+
+.upload-progress-fill.all-failed {
+    background: #ef4444;
+    animation: none;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% center; }
+    100% { background-position: -200% center; }
+}
+
+/* ── Upload result toast ──────────────────────────────────────────────────── */
+
+.upload-result-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    color: #34d399;
+    font-weight: 500;
+}
+
+.upload-result-toast.has-errors {
+    color: #fbbf24;
+}
+
+.upload-result-toast.all-failed {
+    color: #f87171;
+}
