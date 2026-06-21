@@ -7,3 +7,6 @@ pydantic>=2.0
 fastapi
 uvicorn
 sse-starlette
+
+# Environment variable loading
+python-dotenv
