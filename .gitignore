@@ -39,3 +39,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Environment / Secrets — NEVER commit credentials
+app/.env
+*.env

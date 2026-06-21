@@ -22,5 +22,5 @@ start http://localhost:8000
 
 :: Start the API server
 echo Starting API server on port 8000...
-"app\venv\Scripts\python.exe" -m uvicorn app.api:app --host 0.0.0.0 --port 8000
+"app\venv\Scripts\python.exe" -m uvicorn app.api:app --host 0.0.0.0 --port 8000 --reload
 pause
